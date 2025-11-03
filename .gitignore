@@ -1,0 +1,4 @@
+/utils/.env.key
+/cfg/.env.tstsite
+/node_modules/
+/.idea/
