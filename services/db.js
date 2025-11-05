@@ -4,17 +4,25 @@ const { Pool } = pkg;
 
 const pool = new Pool(Config.DB_CONFIG);
 
-/**
- * Retorna una conexión PostgreSQL configurada según región y formato de fecha.
- */
+const tzRegex = /^[A-Za-z]+\/[A-Za-z_]+$/;
+const allowedDatestyles = new Set(['ISO, DMY', 'ISO, MDY', 'ISO, YMD']);
+
 export async function getDbConnection(region = 'Europe/Madrid', datestyle = 'ISO, DMY') {
+    if (!tzRegex.test(region)) {
+        console.warn('[DB] Region inválida, forzando DEFAULT_TZ');
+        region = 'Europe/Madrid';
+    }
+    if (!allowedDatestyles.has(datestyle)) datestyle = 'ISO, DMY';
+
     const client = await pool.connect();
     try {
+        // Ya no iniciamos una transacción, aplicamos ajustes directos
         await client.query(`SET TimeZone = '${region}'`);
         await client.query(`SET DateStyle = '${datestyle}'`);
+
+        // Cada query que hagas con este cliente será autocommit
         return client;
     } catch (err) {
-        console.error('[DB CONFIG ERROR]', err.message);
         client.release();
         throw err;
     }

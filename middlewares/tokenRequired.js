@@ -1,23 +1,29 @@
 import jwt from 'jsonwebtoken';
 import { Config } from '../cfg/config.js';
 
+export const revokedTokens = new Set();
+
 export function tokenRequired(req, res, next) {
     const authHeader = req.headers['authorization'] || '';
     if (!authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Token requerido o mal formado' });
+        return res.status(401).json({ error: 'Token requerido' });
     }
 
     const token = authHeader.split(' ')[1];
     try {
-        const payload = jwt.verify(token, Config.SECRET_KEY, {
-            algorithms: [Config.ALGORITHM]
+        const decoded = jwt.verify(token, Config.SECRET_KEY, {
+            algorithms: [Config.ALGORITHM],
+            issuer: Config.JWT_ISSUER,
+            audience: Config.JWT_AUDIENCE
         });
-        req.user = payload;
+
+        if (revokedTokens.has(decoded.jti)) {
+            return res.status(401).json({ error: 'Token revocado. Debe iniciar sesión nuevamente.' });
+        }
+
+        req.user = decoded;
         next();
     } catch (err) {
-        if (err.name === 'TokenExpiredError') {
-            return res.status(401).json({ error: 'Token expirado' });
-        }
-        return res.status(401).json({ error: 'Token inválido' });
+        return res.status(401).json({ error: 'Token inválido o expirado' });
     }
 }

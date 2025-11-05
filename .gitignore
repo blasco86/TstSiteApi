@@ -2,3 +2,4 @@
 /cfg/.env.tstsite
 /node_modules/
 /.idea/
+/package-lock.json
