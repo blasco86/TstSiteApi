@@ -11,7 +11,7 @@ const envData = cryptor.decryptEnvFile(path.join(__dirname, '.env.tstsite'));
 
 const SECRET_KEY = envData.SECRET_KEY;
 if (!SECRET_KEY || SECRET_KEY.length < 32) {
-    console.error('❌ SECRET_KEY no configurada o insuficiente (min 32 bytes). Abortando.');
+    console.error('❌ SECRET_KEY no configurada o insuficiente (min 32 bytes).');
     process.exit(1);
 }
 
