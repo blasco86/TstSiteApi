@@ -8,7 +8,7 @@ const debug = debugLib('TstSiteApi:server');
 const port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
-// Si estamos detrás de proxy (alwaysdata) y queremos confiar en x-forwarded-*
+// Si estamos detrás de proxy (host) y queremos confiar en x-forwarded-*
 if (process.env.TRUST_PROXY === 'true') {
     app.set('trust proxy', true);
 }

@@ -16,11 +16,9 @@ export async function getDbConnection(region = 'Europe/Madrid', datestyle = 'ISO
 
     const client = await pool.connect();
     try {
-        // Ya no iniciamos una transacción, aplicamos ajustes directos
         await client.query(`SET TimeZone = '${region}'`);
         await client.query(`SET DateStyle = '${datestyle}'`);
 
-        // Cada query que hagas con este cliente será autocommit
         return client;
     } catch (err) {
         client.release();
