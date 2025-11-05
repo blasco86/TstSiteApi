@@ -8,6 +8,7 @@ export class Cryptor {
     constructor(keyFilePath = path.join(path.dirname(fileURLToPath(import.meta.url)), '.env.key')) {
         if (!fs.existsSync(keyFilePath)) throw new Error(`❌ Clave no encontrada: ${keyFilePath}`);
         const key = fs.readFileSync(keyFilePath, 'utf8').trim();
+        if (!key) throw new Error('❌ Clave vacía');
         this.secret = new fernet.Secret(key);
     }
 
