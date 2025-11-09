@@ -4,10 +4,10 @@ import dotenv from 'dotenv';
 import { Cryptor } from '../utils/cryptor.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '.env.tstsite') });
+dotenv.config({ path: path.join(__dirname, '../.env/.env.tstsite') });
 
-const cryptor = new Cryptor(path.join(__dirname, '../utils/.env.key'));
-const envData = cryptor.decryptEnvFile(path.join(__dirname, '.env.tstsite'));
+const cryptor = new Cryptor(path.join(__dirname, '../.env/.env.key'));
+const envData = cryptor.decryptEnvFile(path.join(__dirname, '../.env/.env.tstsite'));
 
 const SECRET_KEY = envData.SECRET_KEY;
 if (!SECRET_KEY || SECRET_KEY.length < 32) {

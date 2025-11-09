@@ -1,7 +1,7 @@
 import express from 'express';
 import { tokenRequired } from '../middlewares/tokenRequired.js';
 import { apiKeyRequired } from '../middlewares/apiKeyRequired.js';
-import { getDbConnection } from '../services/db.js';
+import { getDbConnection } from '../cfg/db.js';
 
 const router = express.Router();
 
