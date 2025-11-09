@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { Config } from '../cfg/config.js';
 import { apiKeyRequired } from '../middlewares/apiKeyRequired.js';
 import { tokenRequired, revokedTokens } from '../middlewares/tokenRequired.js';
-import { getDbConnection } from '../services/db.js';
+import { getDbConnection } from '../cfg/db.js';
 
 const router = express.Router();
 

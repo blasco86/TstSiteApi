@@ -1,5 +1,5 @@
-/utils/.env.key
-/cfg/.env.tstsite
+/.env/.env.key
+/.env/.env.tstsite
 /node_modules/
 /.idea/
 /package-lock.json
