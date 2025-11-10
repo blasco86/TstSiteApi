@@ -2,7 +2,8 @@ name: TST - Despliegue automático de API planificado
 
 on:
   schedule:
-    - cron: "0 6,18 * * *"  # 07:00 y 19:00 hora de Madrid
+    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
+    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
   workflow_dispatch:
   push:
     branches:
@@ -21,7 +22,7 @@ jobs:
       - name: 🧰 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       # 3️⃣ Preparar paquete de despliegue
       - name: 📁 Prepare deployment package
@@ -60,10 +61,13 @@ jobs:
 
             echo "🧹 Limpiando instalación anterior..."
             rm -rf node_modules package-lock.json
-            npm cache clean --force
+            npm cache clean --force   # 🔹 cache antes de instalar
 
             echo "📦 Instalando dependencias de producción..."
             npm install --omit=dev --no-audit --no-fund --silent
+
+            echo "🧹 Limpiando cache post-instalación..."
+            npm cache clean --force   # 🔹 cache después de instalar
 
             echo "⚡ Optimizando permisos y entorno..."
             chmod -R 755 .
