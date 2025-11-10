@@ -2,12 +2,11 @@ name: TST - Despliegue automático de API planificado
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
-    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
+    - cron: "0 6,18 * * *"  # 07:00 y 19:00 hora de Madrid
   workflow_dispatch:
   push:
     branches:
-      - tst  # Solo cuando hay commits en la rama tst
+      - tst
 
 jobs:
   deploy:
@@ -41,9 +40,9 @@ jobs:
       - name: 🚀 Deploy to AlwaysData via SSH
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.SSH_HOST_TST }}       # ej: ssh-tstsite.alwaysdata.net
-          username: ${{ secrets.SSH_USER_TST }}   # ej: tstsite
-          key: ${{ secrets.SSH_KEY_TST }}         # clave privada SSH sin passphrase
+          host: ${{ secrets.SSH_HOST_TST }}
+          username: ${{ secrets.SSH_USER_TST }}
+          key: ${{ secrets.SSH_KEY_TST }}
           source: "deploy/*"
           target: "/home/tstsite/www/api"
           overwrite: true
