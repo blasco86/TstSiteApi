@@ -1,4 +1,4 @@
-name: Deploy to AlwaysData (TST)
+name: TST - Despliegue automático de API planificado
 
 on:
   schedule:
