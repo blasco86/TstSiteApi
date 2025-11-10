@@ -10,22 +10,22 @@ on:
       - tst
 
 jobs:
-  deploy:
+  despliegue:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Clonar repositorio
-      - name: 🧩 Checkout repo
+      # 1️⃣ Clonar el repositorio
+      - name: 🧩 Clonar repositorio
         uses: actions/checkout@v4
 
       # 2️⃣ Configurar Node.js
-      - name: 🧰 Setup Node.js
+      - name: 🧰 Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
-      # 3️⃣ Preparar paquete de despliegue
-      - name: 📁 Prepare deployment package
+      # 3️⃣ Preparar el paquete de despliegue
+      - name: 📁 Preparar carpeta de despliegue
         run: |
           mkdir -p deploy
           rsync -av --delete \
@@ -37,7 +37,7 @@ jobs:
                     ./ ./deploy/
 
       # 4️⃣ Subir archivos vía SCP
-      - name: 🚀 Deploy to AlwaysData via SSH
+      - name: 🚀 Subir archivos a AlwaysData por SSH
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST_TST }}
@@ -48,8 +48,8 @@ jobs:
           overwrite: true
           strip_components: 1
 
-      # 5️⃣ Limpieza, instalación e inicio del servicio
-      - name: 🔁 Clean, Install & Restart AlwaysData service
+      # 5️⃣ Limpiar, instalar dependencias y reiniciar servicio
+      - name: 🔁 Limpiar, instalar y reiniciar servicio en AlwaysData
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST_TST }}
@@ -61,13 +61,13 @@ jobs:
 
             echo "🧹 Limpiando instalación anterior..."
             rm -rf node_modules package-lock.json
-            npm cache clean --force   # 🔹 cache antes de instalar
+            npm cache clean --force   # Limpiar cache antes de instalar
 
             echo "📦 Instalando dependencias de producción..."
             npm install --omit=dev --no-audit --no-fund --silent
 
-            echo "🧹 Limpiando cache post-instalación..."
-            npm cache clean --force   # 🔹 cache después de instalar
+            echo "🧹 Limpiando cache después de instalar..."
+            npm cache clean --force   # Limpiar cache después de instalar
 
             echo "⚡ Optimizando permisos y entorno..."
             chmod -R 755 .
@@ -86,5 +86,8 @@ jobs:
             echo "✅ API desplegada y servicio reiniciado correctamente."
 
       # 6️⃣ Limpiar carpeta deploy local
-      - name: 🗑️ Clean local deploy folder
-        run: rm -rf deploy
+      - name: 🗑️ Eliminar carpeta de despliegue local
+        run: |
+          cd $GITHUB_WORKSPACE
+          rm -rf deploy
+          echo "✅ Carpeta deploy eliminada correctamente"
