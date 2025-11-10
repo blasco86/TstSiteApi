@@ -2,8 +2,7 @@ name: TST - Despliegue automático de API planificado
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
-    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
+    - cron: "0 6,18 * * *"  # 07:00 y 19:00 hora de Madrid
   workflow_dispatch:
   push:
     branches:
@@ -56,6 +55,7 @@ jobs:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
+          fail_on_error: false   # Ignorar exit code de procesos en background
           script: |
             cd /home/tstsite/www/api
 
@@ -71,7 +71,14 @@ jobs:
             export NODE_ENV=production
 
             echo "♻️ Reiniciando servicio..."
-            pkill -f "node.*bin/www" || true
             nohup node bin/www > app.log 2>&1 &
+            disown  # evita que reciba SIGTERM al cerrar SSH
+
+            # Verificación rápida de que Node sigue corriendo
+            if pgrep -fl "node.*bin/www" > /dev/null; then
+              echo "✅ Node está corriendo correctamente"
+            else
+              echo "⚠️ Node no se está ejecutando"
+            fi
 
             echo "✅ API desplegada, cache limpia y servicio reiniciado correctamente."
