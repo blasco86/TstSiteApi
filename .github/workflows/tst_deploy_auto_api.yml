@@ -1,0 +1,61 @@
+name: Deploy to AlwaysData (TST)
+
+on:
+  schedule:
+    - cron: "0 7,19 * * *"  # Ejecuta a las 07:00 y 19:00 UTC
+  workflow_dispatch:        # Permite ejecución manual desde GitHub Actions
+  push:
+    branches:
+      - tsts                # Solo cuando hay commits en la rama tsts
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧩 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies (no dev)
+        run: npm ci --omit=dev
+
+      - name: 📁 Prepare deployment package
+        run: |
+          mkdir deploy
+          rsync -av --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='node_modules' \
+                    --exclude='.env' \
+                    --exclude='.env.key' \
+                    --exclude='*.log' \
+                    ./ ./deploy/
+
+      - name: 🚀 Deploy to AlwaysData via SSH
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST_TST }}
+          username: ${{ secrets.SSH_USER_TST }}
+          password: ${{ secrets.SSH_PASSWORD_TST }}
+          source: "deploy/*"
+          target: "/home/tstsite/www/api"
+          overwrite: true
+          strip_components: 1
+
+      - name: 🔁 Restart AlwaysData service
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SSH_HOST_TST }}
+          username: ${{ secrets.SSH_USER_TST }}
+          password: ${{ secrets.SSH_PASSWORD_TST }}
+          script: |
+            cd /home/tstsite/www/api
+            npm ci --omit=dev
+            pkill -f "node.*bin/www" || true
+            nohup node bin/www > app.log 2>&1 &
+            echo "✅ API reiniciada correctamente."
