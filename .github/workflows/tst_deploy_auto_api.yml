@@ -23,21 +23,31 @@ jobs:
         with:
           node-version: '20'
 
-      # 3️⃣ Subir solo archivos necesarios si existen
+      # 3️⃣ Preparar paquete de despliegue
+      - name: 📁 Prepare deployment package
+        run: |
+          mkdir -p deploy
+          rsync -av --delete \
+                    --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='node_modules' \
+                    --exclude='.env*' \
+                    --exclude='*.log' \
+                    ./ ./deploy/
+
+      # 4️⃣ Subir archivos vía SCP
       - name: 🚀 Deploy to AlwaysData via SSH
-        if: success()
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
-          source: |
-            $(find . -maxdepth 1 -type f -not -name "*.log" -not -name "package-lock.json" -not -name ".env*" -not -name "*.git*" -not -name "*.github*" | tr '\n' ' ')
+          source: "deploy/*"
           target: "/home/tstsite/www/api"
           overwrite: true
           strip_components: 1
 
-      # 4️⃣ Limpieza, instalación e inicio del servicio
+      # 5️⃣ Limpieza, instalación e inicio del servicio
       - name: 🔁 Clean, Install & Restart AlwaysData service
         uses: appleboy/ssh-action@v1.2.2
         with:
@@ -70,3 +80,7 @@ jobs:
             fi
 
             echo "✅ API desplegada y servicio reiniciado correctamente."
+
+      # 6️⃣ Limpiar carpeta deploy local
+      - name: 🗑️ Clean local deploy folder
+        run: rm -rf deploy
