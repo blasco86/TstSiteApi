@@ -2,7 +2,8 @@ name: TST - Despliegue automático de API planificado
 
 on:
   schedule:
-    - cron: "0 6,18 * * *"  # 07:00 y 19:00 hora de Madrid (UTC+1)
+    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
+    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
   workflow_dispatch:
   push:
     branches:
