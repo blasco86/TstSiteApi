@@ -2,12 +2,11 @@ name: TST - Despliegue automático de API planificado
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
-    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
+    - cron: "0 6,18 * * *"  # 07:00 y 19:00 hora de Madrid (UTC+1)
   workflow_dispatch:
   push:
     branches:
-      - tst  # Solo ejecuta si hay commits en la rama tst
+      - tst  # Solo cuando hay commits en la rama tst
 
 jobs:
   deploy:
@@ -24,7 +23,7 @@ jobs:
         with:
           node-version: '20'
 
-      # 3️⃣ Preparar paquete de despliegue (excluye basura y archivos sensibles)
+      # 3️⃣ Preparar paquete de despliegue
       - name: 📁 Prepare deployment package
         run: |
           mkdir deploy
@@ -37,7 +36,7 @@ jobs:
                     --exclude='*.log' \
                     ./ ./deploy/
 
-      # 4️⃣ Subir archivos a AlwaysData vía SSH (clave privada)
+      # 4️⃣ Subir archivos vía SCP
       - name: 🚀 Deploy to AlwaysData via SSH
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -49,9 +48,9 @@ jobs:
           overwrite: true
           strip_components: 1
 
-      # 5️⃣ Limpieza, instalación y reinicio del servicio remoto
+      # 5️⃣ Limpieza, instalación e inicio del servicio
       - name: 🔁 Clean, Install & Restart AlwaysData service
-        uses: appleboy/ssh-action@0.1.10
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
