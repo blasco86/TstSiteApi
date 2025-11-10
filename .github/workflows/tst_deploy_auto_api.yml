@@ -2,33 +2,34 @@ name: TST - Despliegue automático de API planificado
 
 on:
   schedule:
-    - cron: "0 7,19 * * *"  # Ejecuta a las 07:00 y 19:00 UTC
+    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
+    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
   workflow_dispatch:        # Permite ejecución manual desde GitHub Actions
   push:
     branches:
-      - tsts                # Solo cuando hay commits en la rama tsts
+      - tst                 # Ejecuta solo si hay commits en la rama tst
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Clonar el repositorio
       - name: 🧩 Checkout repo
         uses: actions/checkout@v4
 
+      # 2️⃣ Configurar Node.js
       - name: 🧰 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: 📦 Install dependencies (no dev)
-        run: npm ci --omit=dev
-
+      # 3️⃣ Empaquetar solo lo necesario (sin basura ni archivos sensibles)
       - name: 📁 Prepare deployment package
         run: |
           mkdir deploy
-          rsync -av --exclude='.git' \
+          rsync -av --delete \
+                    --exclude='.git' \
                     --exclude='.github' \
                     --exclude='node_modules' \
                     --exclude='.env' \
@@ -36,6 +37,7 @@ jobs:
                     --exclude='*.log' \
                     ./ ./deploy/
 
+      # 4️⃣ Subir los archivos al servidor AlwaysData
       - name: 🚀 Deploy to AlwaysData via SSH
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -47,7 +49,8 @@ jobs:
           overwrite: true
           strip_components: 1
 
-      - name: 🔁 Restart AlwaysData service
+      # 5️⃣ Limpieza, reinstalación y reinicio eficiente del servicio remoto
+      - name: 🔁 Clean, Install & Restart AlwaysData service
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SSH_HOST_TST }}
@@ -55,7 +58,20 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD_TST }}
           script: |
             cd /home/tstsite/www/api
-            npm ci --omit=dev
+
+            echo "🧹 Limpiando instalación anterior..."
+            rm -rf node_modules package-lock.json
+            npm cache clean --force
+
+            echo "📦 Instalando dependencias de producción..."
+            npm install --omit=dev --no-audit --no-fund --silent
+
+            echo "⚡ Optimizando permisos y entorno..."
+            chmod -R 755 .
+            export NODE_ENV=production
+
+            echo "♻️ Reiniciando servicio..."
             pkill -f "node.*bin/www" || true
             nohup node bin/www > app.log 2>&1 &
-            echo "✅ API reiniciada correctamente."
+
+            echo "✅ API desplegada, cache limpia y servicio reiniciado correctamente."
