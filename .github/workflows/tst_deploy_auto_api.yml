@@ -1,0 +1,93 @@
+name: TST - Despliegue automático de API planificado
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
+    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
+  workflow_dispatch:
+  push:
+    branches:
+      - tst
+
+jobs:
+  despliegue:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Clonar el repositorio
+      - name: 🧩 Clonar repositorio
+        uses: actions/checkout@v4
+
+      # 2️⃣ Configurar Node.js
+      - name: 🧰 Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # 3️⃣ Preparar el paquete de despliegue
+      - name: 📁 Preparar carpeta de despliegue
+        run: |
+          mkdir -p deploy
+          rsync -av --delete \
+                    --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='node_modules' \
+                    --exclude='.env*' \
+                    --exclude='*.log' \
+                    ./ ./deploy/
+
+      # 4️⃣ Subir archivos vía SCP
+      - name: 🚀 Subir archivos a AlwaysData por SSH
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST_TST }}
+          username: ${{ secrets.SSH_USER_TST }}
+          key: ${{ secrets.SSH_KEY_TST }}
+          source: "deploy/*"
+          target: "/home/tstsite/www/api"
+          overwrite: true
+          strip_components: 1
+
+      # 5️⃣ Limpiar, instalar dependencias y reiniciar servicio
+      - name: 🔁 Limpiar, instalar y reiniciar servicio en AlwaysData
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SSH_HOST_TST }}
+          username: ${{ secrets.SSH_USER_TST }}
+          key: ${{ secrets.SSH_KEY_TST }}
+          fail_on_error: false
+          script: |
+            cd /home/tstsite/www/api
+
+            echo "🧹 Limpiando instalación anterior..."
+            rm -rf node_modules package-lock.json
+            npm cache clean --force   # Limpiar cache antes de instalar
+
+            echo "📦 Instalando dependencias de producción..."
+            npm install --omit=dev --no-audit --no-fund --silent
+
+            echo "🧹 Limpiando cache después de instalar..."
+            npm cache clean --force   # Limpiar cache después de instalar
+
+            echo "⚡ Optimizando permisos y entorno..."
+            chmod -R 755 .
+            export NODE_ENV=production
+
+            echo "♻️ Reiniciando servicio sin generar logs..."
+            nohup node bin/www >/dev/null 2>&1 &
+            disown
+
+            if pgrep -fl "node.*bin/www" > /dev/null; then
+              echo "✅ Node está corriendo correctamente"
+            else
+              echo "⚠️ Node no se está ejecutando"
+            fi
+
+            echo "✅ API desplegada y servicio reiniciado correctamente."
+
+      # 6️⃣ Limpiar carpeta deploy local
+      - name: 🗑️ Eliminar carpeta de despliegue local
+        run: |
+          cd $GITHUB_WORKSPACE
+          rm -rf deploy
+          echo "✅ Carpeta deploy eliminada correctamente"
