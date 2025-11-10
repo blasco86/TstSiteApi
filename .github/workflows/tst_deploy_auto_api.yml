@@ -5,9 +5,6 @@ on:
     - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
     - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
   workflow_dispatch:
-  push:
-    branches:
-      - tst
 
 jobs:
   despliegue:
