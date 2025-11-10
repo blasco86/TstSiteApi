@@ -4,17 +4,17 @@ on:
   schedule:
     - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
     - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
-  workflow_dispatch:        # Permite ejecución manual desde GitHub Actions
+  workflow_dispatch:
   push:
     branches:
-      - tst                 # Solo cuando hay commits en la rama tst
+      - tst  # Solo ejecuta si hay commits en la rama tst
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Clonar el repositorio
+      # 1️⃣ Clonar repositorio
       - name: 🧩 Checkout repo
         uses: actions/checkout@v4
 
@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: '20'
 
-      # 3️⃣ Empaquetar solo lo necesario (sin archivos sensibles)
+      # 3️⃣ Preparar paquete de despliegue (excluye basura y archivos sensibles)
       - name: 📁 Prepare deployment package
         run: |
           mkdir deploy
@@ -37,21 +37,21 @@ jobs:
                     --exclude='*.log' \
                     ./ ./deploy/
 
-      # 4️⃣ Subir archivos a AlwaysData vía SSH (autenticación por clave)
+      # 4️⃣ Subir archivos a AlwaysData vía SSH (clave privada)
       - name: 🚀 Deploy to AlwaysData via SSH
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.SSH_HOST_TST }}
-          username: ${{ secrets.SSH_USER_TST }}
-          key: ${{ secrets.SSH_KEY_TST }}
+          host: ${{ secrets.SSH_HOST_TST }}       # ej: ssh-tstsite.alwaysdata.net
+          username: ${{ secrets.SSH_USER_TST }}   # ej: tstsite
+          key: ${{ secrets.SSH_KEY_TST }}         # clave privada SSH sin passphrase
           source: "deploy/*"
           target: "/home/tstsite/www/api"
           overwrite: true
           strip_components: 1
 
-      # 5️⃣ Limpieza total, reinstalación y reinicio del servicio remoto
+      # 5️⃣ Limpieza, instalación y reinicio del servicio remoto
       - name: 🔁 Clean, Install & Restart AlwaysData service
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@0.1.10
         with:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
