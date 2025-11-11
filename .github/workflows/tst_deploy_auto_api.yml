@@ -1,13 +1,14 @@
-name: TST - Despliegue automático de API planificado
+name: 🌐 TST - Despliegue automático de API (AlwaysData)
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
-    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
-  workflow_dispatch:
+    - cron: '0 6 * * *'    # 07:00 hora España (06:00 UTC)
+    - cron: '0 18 * * *'   # 19:00 hora España (18:00 UTC)
+  workflow_dispatch:       # Permite ejecución manual
 
 jobs:
   despliegue:
+    name: 🔁 Desplegar API en AlwaysData
     runs-on: ubuntu-latest
 
     steps:
@@ -21,20 +22,23 @@ jobs:
         with:
           node-version: '24'
 
-      # 3️⃣ Preparar el paquete de despliegue
+      # 3️⃣ Preparar paquete limpio de despliegue
       - name: 📁 Preparar carpeta de despliegue
         run: |
+          echo "📦 Preparando artefacto limpio..."
           mkdir -p deploy
           rsync -av --delete \
-                    --exclude='.git' \
-                    --exclude='.github' \
-                    --exclude='node_modules' \
-                    --exclude='.env*' \
-                    --exclude='*.log' \
-                    ./ ./deploy/
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='.env*' \
+            --exclude='*.log' \
+            --exclude='deploy' \
+            ./ ./deploy/
+          echo "✅ Carpeta deploy lista."
 
-      # 4️⃣ Subir archivos vía SCP
-      - name: 🚀 Subir archivos a AlwaysData por SSH
+      # 4️⃣ Subir archivos a AlwaysData vía SCP
+      - name: 🚀 Subir código a AlwaysData
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST_TST }}
@@ -45,41 +49,43 @@ jobs:
           overwrite: true
           strip_components: 1
 
-      # 5️⃣ Limpiar, instalar dependencias y reiniciar servicio
-      - name: 🔁 Limpiar, instalar y reiniciar servicio en AlwaysData
+      # 5️⃣ Instalar dependencias y reiniciar el servicio
+      - name: 🔁 Instalar dependencias y reiniciar API
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
-          fail_on_error: false
           script: |
+            set -e
             cd /home/tstsite/www/api
-            echo "🧹 Eliminando posibles carpetas de deploy antiguas..."
-            rm -rf ./deploy   # 🧨 Esta línea limpia la carpeta de deploy remota
-            echo "🧹 Limpiando instalación anterior..."
-            rm -rf node_modules package-lock.json
-            npm cache clean --force
-            echo "📦 Instalando dependencias de producción..."
-            npm install --omit=dev --no-audit --no-fund --silent
-            echo "🧹 Limpiando cache después de instalar..."
-            npm cache clean --force
-            echo "⚡ Ajustando permisos..."
-            chmod -R 755 .
-            echo "♻️ Reiniciando servicio..."
-            pkill -f "node.*bin/www" || true
-            nohup node bin/www >/dev/null 2>&1 &
-            disown
-            if pgrep -fl "node.*bin/www" > /dev/null; then
-              echo "✅ Node está corriendo correctamente"
-            else
-              echo "⚠️ Node no se está ejecutando"
-            fi
-            echo "✅ API desplegada y servicio reiniciado correctamente."
 
-      # 6️⃣ Limpiar carpeta deploy local
-      - name: 🗑️ Eliminar carpeta de despliegue local
+            echo "🧹 Eliminando restos de despliegues anteriores..."
+            rm -rf ./deploy node_modules package-lock.json
+
+            echo "📦 Instalando dependencias de producción..."
+            npm ci --omit=dev --no-audit --no-fund --silent || npm install --omit=dev --no-audit --no-fund --silent
+
+            echo "⚙️ Ajustando permisos..."
+            chmod -R 755 .
+
+            echo "♻️ Reiniciando servicio Node..."
+            pkill -f "node.*bin/www" || true
+            sleep 2
+            nohup bash -c "NODE_ENV=production node bin/www >/dev/null 2>&1 &" >/dev/null 2>&1 &
+            sleep 3
+
+            if pgrep -fl "node.*bin/www" > /dev/null; then
+              echo "✅ Node corriendo correctamente"
+            else
+              echo "⚠️ Error: Node no se está ejecutando"
+              exit 1
+            fi
+
+            echo "✅ Despliegue completado y servicio operativo."
+
+      # 6️⃣ Limpiar artefactos locales
+      - name: 🗑️ Limpiar carpeta temporal local
         run: |
-          cd $GITHUB_WORKSPACE
           rm -rf deploy
-          echo "✅ Carpeta deploy eliminada correctamente"
+          echo "🧽 Limpieza local completada ✅"
