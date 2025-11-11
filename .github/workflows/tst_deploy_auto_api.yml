@@ -1,38 +1,40 @@
-name: 🌐 TST - Despliegue automático de API (AlwaysData)
+name: TST - Despliegue automático de API planificado
 
 on:
   schedule:
-    - cron: '0 6 * * *'    # 07:00 hora España (06:00 UTC)
-    - cron: '0 18 * * *'   # 19:00 hora España (18:00 UTC)
+    - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
+    - cron: '0 18 * * *'  # 19:00 hora España (18:00 UTC)
   workflow_dispatch:
 
 jobs:
   despliegue:
-    name: 🔁 Desplegar API en AlwaysData
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Clonar el repositorio
       - name: 🧩 Clonar repositorio
         uses: actions/checkout@v4
 
+      # 2️⃣ Configurar Node.js
       - name: 🧰 Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
+      # 3️⃣ Preparar el paquete de despliegue
       - name: 📁 Preparar carpeta de despliegue
         run: |
           mkdir -p deploy
           rsync -av --delete \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='node_modules' \
-            --exclude='.env*' \
-            --exclude='*.log' \
-            --exclude='deploy' \
-            ./ ./deploy/
+                    --exclude='.git' \
+                    --exclude='.github' \
+                    --exclude='node_modules' \
+                    --exclude='.env*' \
+                    --exclude='*.log' \
+                    ./ ./deploy/
 
-      - name: 🚀 Subir archivos a AlwaysData
+      # 4️⃣ Subir archivos vía SCP
+      - name: 🚀 Subir archivos a AlwaysData por SSH
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST_TST }}
@@ -43,41 +45,49 @@ jobs:
           overwrite: true
           strip_components: 1
 
-      - name: 🔁 Instalar dependencias y reiniciar API
+      # 5️⃣ Limpiar, instalar dependencias y reiniciar servicio
+      - name: 🔁 Limpiar, instalar y reiniciar servicio en AlwaysData
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
-          script_stop: false
+          fail_on_error: false
           script: |
-            set +e
             cd /home/tstsite/www/api
 
-            echo "🧹 Limpiando restos anteriores..."
-            rm -rf ./deploy node_modules package-lock.json
+            echo "🧹 Eliminando posibles carpetas de deploy antiguas..."
+            rm -rf ./deploy   # 🧨 Esta línea limpia la carpeta de deploy remota
+
+            echo "🧹 Limpiando instalación anterior..."
+            rm -rf node_modules package-lock.json
+            npm cache clean --force
 
             echo "📦 Instalando dependencias de producción..."
-            npm ci --omit=dev --no-audit --no-fund --silent 2>/dev/null || \
-            npm install --omit=dev --no-audit --no-fund --silent 2>/dev/null
+            npm install --omit=dev --no-audit --no-fund --silent
 
-            echo "⚙️ Ajustando permisos..."
+            echo "🧹 Limpiando cache después de instalar..."
+            npm cache clean --force
+
+            echo "⚡ Ajustando permisos..."
             chmod -R 755 .
 
-            echo "♻️ Reiniciando servicio Node..."
-            pkill -f "node.*bin/www" >/dev/null 2>&1 || true
-            sleep 2
-            nohup bash -c "NODE_ENV=production node bin/www >/dev/null 2>&1 &" >/dev/null 2>&1 &
-            sleep 3
+            echo "♻️ Reiniciando servicio..."
+            pkill -f "node.*bin/www" || true
+            nohup node bin/www >/dev/null 2>&1 &
+            disown
 
-            if pgrep -fl "node.*bin/www" >/dev/null; then
-              echo "✅ Node corriendo correctamente"
+            if pgrep -fl "node.*bin/www" > /dev/null; then
+              echo "✅ Node está corriendo correctamente"
             else
               echo "⚠️ Node no se está ejecutando"
             fi
 
-            echo "✅ Despliegue completado correctamente."
-            exit 0
+            echo "✅ API desplegada y servicio reiniciado correctamente."
 
-      - name: 🗑️ Limpiar carpeta local
-        run: rm -rf deploy
+      # 6️⃣ Limpiar carpeta deploy local
+      - name: 🗑️ Eliminar carpeta de despliegue local
+        run: |
+          cd $GITHUB_WORKSPACE
+          rm -rf deploy
+          echo "✅ Carpeta deploy eliminada correctamente"
