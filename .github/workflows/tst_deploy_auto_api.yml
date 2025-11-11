@@ -55,31 +55,26 @@ jobs:
           fail_on_error: false
           script: |
             cd /home/tstsite/www/api
-
+            echo "🧹 Eliminando posibles carpetas de deploy antiguas..."
+            rm -rf ./deploy   # 🧨 Esta línea limpia la carpeta de deploy remota
             echo "🧹 Limpiando instalación anterior..."
             rm -rf node_modules package-lock.json
-            npm cache clean --force   # Limpiar cache antes de instalar
-
+            npm cache clean --force
             echo "📦 Instalando dependencias de producción..."
             npm install --omit=dev --no-audit --no-fund --silent
-
             echo "🧹 Limpiando cache después de instalar..."
-            npm cache clean --force   # Limpiar cache después de instalar
-
-            echo "⚡ Optimizando permisos y entorno..."
+            npm cache clean --force
+            echo "⚡ Ajustando permisos..."
             chmod -R 755 .
-            export NODE_ENV=production
-
-            echo "♻️ Reiniciando servicio sin generar logs..."
+            echo "♻️ Reiniciando servicio..."
+            pkill -f "node.*bin/www" || true
             nohup node bin/www >/dev/null 2>&1 &
             disown
-
             if pgrep -fl "node.*bin/www" > /dev/null; then
               echo "✅ Node está corriendo correctamente"
             else
               echo "⚠️ Node no se está ejecutando"
             fi
-
             echo "✅ API desplegada y servicio reiniciado correctamente."
 
       # 6️⃣ Limpiar carpeta deploy local
