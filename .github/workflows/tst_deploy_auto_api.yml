@@ -1,5 +1,3 @@
-name: TST - Despliegue automático de API planificado
-
 on:
   schedule:
     - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
@@ -46,12 +44,13 @@ jobs:
           strip_components: 1
 
       # 5️⃣ Limpiar, instalar dependencias y reiniciar servicio
-      - name: 🔁 Limpiar, instalar dependencias y reiniciar servicio en AlwaysData
+      - name: 🔁 Limpiar, instalar y reiniciar servicio en AlwaysData
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
+          fail_on_error: false
           script: |
             cd /home/tstsite/www/api
 
@@ -62,12 +61,14 @@ jobs:
             echo "📦 Instalando dependencias de producción..."
             npm install --omit=dev --no-audit --no-fund --silent
 
+            echo "🧹 Limpiando cache después de instalar..."
+            npm cache clean --force   # Limpiar cache después de instalar
+
             echo "⚡ Optimizando permisos y entorno..."
             chmod -R 755 .
             export NODE_ENV=production
 
             echo "♻️ Reiniciando servicio sin generar logs..."
-            pkill -f "node.*bin/www" || true
             nohup node bin/www >/dev/null 2>&1 &
             disown
 
@@ -77,13 +78,6 @@ jobs:
               echo "⚠️ Node no se está ejecutando"
             fi
 
-            echo "🧽 Eliminando carpeta 'deploy' remota..."
-            rm -rf /home/tstsite/www/api/deploy || true
-            echo "✅ Carpeta 'deploy' remota eliminada correctamente."
-
-            echo "🧹 Limpiando cache final..."
-            npm cache clean --force   # Limpiar cache después de instalar
-
             echo "✅ API desplegada y servicio reiniciado correctamente."
 
       # 6️⃣ Limpiar carpeta deploy local
@@ -92,3 +86,18 @@ jobs:
           cd $GITHUB_WORKSPACE
           rm -rf deploy
           echo "✅ Carpeta deploy eliminada correctamente"
+
+      # 7️⃣ Limpiar carpeta deploy en el servidor remoto
+      - name: 🧹 Eliminar carpeta deploy remota
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SSH_HOST_TST }}
+          username: ${{ secrets.SSH_USER_TST }}
+          key: ${{ secrets.SSH_KEY_TST }}
+          script: |
+            if [ -d "/home/tstsite/www/api/deploy" ]; then
+              rm -rf /home/tstsite/www/api/deploy
+              echo "✅ Carpeta deploy remota eliminada correctamente"
+            else
+              echo "ℹ️ Carpeta deploy remota no existe, nada que eliminar"
+            fi
