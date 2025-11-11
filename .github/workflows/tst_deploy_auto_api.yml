@@ -63,14 +63,12 @@ jobs:
             echo "📦 Instalando dependencias de producción..."
             npm install --omit=dev --no-audit --no-fund --silent
 
-            echo "🧹 Limpiando cache después de instalar..."
-            npm cache clean --force   # Limpiar cache después de instalar
-
             echo "⚡ Optimizando permisos y entorno..."
             chmod -R 755 .
             export NODE_ENV=production
 
             echo "♻️ Reiniciando servicio sin generar logs..."
+            pkill -f "node.*bin/www" || true
             nohup node bin/www >/dev/null 2>&1 &
             disown
 
@@ -80,6 +78,13 @@ jobs:
               echo "⚠️ Node no se está ejecutando"
             fi
 
+            echo "🧽 Eliminando carpeta 'deploy' remota..."
+            rm -rf /home/tstsite/www/api/deploy || true
+            echo "🗑️ Carpeta deploy remota eliminada correctamente."
+
+            echo "🧹 Limpiando cache después de instalar..."
+            npm cache clean --force   # Limpiar cache después de instalar
+
             echo "✅ API desplegada y servicio reiniciado correctamente."
 
       # 6️⃣ Limpiar carpeta deploy local
@@ -87,4 +92,4 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           rm -rf deploy
-          echo "✅ Carpeta deploy eliminada correctamente"
+          echo "✅ Carpeta deploy local eliminada correctamente"
