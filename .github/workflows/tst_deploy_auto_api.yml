@@ -56,24 +56,21 @@ jobs:
           script: |
             cd /home/tstsite/www/api
 
-            echo "🧹 Eliminando posibles carpetas de deploy antiguas..."
-            rm -rf ./deploy   # 🧨 Esta línea limpia la carpeta de deploy remota
-
             echo "🧹 Limpiando instalación anterior..."
             rm -rf node_modules package-lock.json
-            npm cache clean --force
+            npm cache clean --force   # Limpiar cache antes de instalar
 
             echo "📦 Instalando dependencias de producción..."
             npm install --omit=dev --no-audit --no-fund --silent
 
             echo "🧹 Limpiando cache después de instalar..."
-            npm cache clean --force
+            npm cache clean --force   # Limpiar cache después de instalar
 
-            echo "⚡ Ajustando permisos..."
+            echo "⚡ Optimizando permisos y entorno..."
             chmod -R 755 .
+            export NODE_ENV=production
 
-            echo "♻️ Reiniciando servicio..."
-            pkill -f "node.*bin/www" || true
+            echo "♻️ Reiniciando servicio sin generar logs..."
             nohup node bin/www >/dev/null 2>&1 &
             disown
 
