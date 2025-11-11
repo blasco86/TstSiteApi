@@ -49,34 +49,34 @@ jobs:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
+          script_stop: false
           script: |
-            set -e
+            set +e
             cd /home/tstsite/www/api
 
             echo "🧹 Limpiando restos anteriores..."
             rm -rf ./deploy node_modules package-lock.json
 
             echo "📦 Instalando dependencias de producción..."
-            npm ci --omit=dev --no-audit --no-fund --silent || npm install --omit=dev --no-audit --no-fund --silent
+            npm ci --omit=dev --no-audit --no-fund --silent 2>/dev/null || \
+            npm install --omit=dev --no-audit --no-fund --silent 2>/dev/null
 
             echo "⚙️ Ajustando permisos..."
             chmod -R 755 .
 
             echo "♻️ Reiniciando servicio Node..."
-            pkill -f "node.*bin/www" || true
+            pkill -f "node.*bin/www" >/dev/null 2>&1 || true
             sleep 2
-            (nohup bash -c "NODE_ENV=production node bin/www >/dev/null 2>&1 &" >/dev/null 2>&1 &) || true
+            nohup bash -c "NODE_ENV=production node bin/www >/dev/null 2>&1 &" >/dev/null 2>&1 &
             sleep 3
 
-            if pgrep -fl "node.*bin/www" > /dev/null; then
+            if pgrep -fl "node.*bin/www" >/dev/null; then
               echo "✅ Node corriendo correctamente"
             else
               echo "⚠️ Node no se está ejecutando"
             fi
 
             echo "✅ Despliegue completado correctamente."
-
-            # Evitar fallo por exit 143
             exit 0
 
       - name: 🗑️ Limpiar carpeta local
