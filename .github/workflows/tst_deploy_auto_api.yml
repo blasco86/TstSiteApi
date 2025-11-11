@@ -49,7 +49,6 @@ jobs:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
-          script_stop: false
           script: |
             set -e
             cd /home/tstsite/www/api
@@ -66,7 +65,7 @@ jobs:
             echo "♻️ Reiniciando servicio Node..."
             pkill -f "node.*bin/www" || true
             sleep 2
-            nohup bash -c "NODE_ENV=production node bin/www >/dev/null 2>&1 &" >/dev/null 2>&1 &
+            (nohup bash -c "NODE_ENV=production node bin/www >/dev/null 2>&1 &" >/dev/null 2>&1 &) || true
             sleep 3
 
             if pgrep -fl "node.*bin/www" > /dev/null; then
@@ -76,6 +75,9 @@ jobs:
             fi
 
             echo "✅ Despliegue completado correctamente."
+
+            # Evitar fallo por exit 143
+            exit 0
 
       - name: 🗑️ Limpiar carpeta local
         run: rm -rf deploy
