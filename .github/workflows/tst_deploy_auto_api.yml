@@ -1,3 +1,5 @@
+name: TST - Despliegue automático de API planificado
+
 on:
   schedule:
     - cron: '0 6 * * *'   # 07:00 hora España (06:00 UTC)
