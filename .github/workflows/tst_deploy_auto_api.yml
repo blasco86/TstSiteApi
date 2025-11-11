@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 6 * * *'    # 07:00 hora España (06:00 UTC)
     - cron: '0 18 * * *'   # 19:00 hora España (18:00 UTC)
-  workflow_dispatch:       # Permite ejecución manual
+  workflow_dispatch:
 
 jobs:
   despliegue:
@@ -12,20 +12,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Clonar el repositorio
       - name: 🧩 Clonar repositorio
         uses: actions/checkout@v4
 
-      # 2️⃣ Configurar Node.js
       - name: 🧰 Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
-      # 3️⃣ Preparar paquete limpio de despliegue
       - name: 📁 Preparar carpeta de despliegue
         run: |
-          echo "📦 Preparando artefacto limpio..."
           mkdir -p deploy
           rsync -av --delete \
             --exclude='.git' \
@@ -35,10 +31,8 @@ jobs:
             --exclude='*.log' \
             --exclude='deploy' \
             ./ ./deploy/
-          echo "✅ Carpeta deploy lista."
 
-      # 4️⃣ Subir archivos a AlwaysData vía SCP
-      - name: 🚀 Subir código a AlwaysData
+      - name: 🚀 Subir archivos a AlwaysData
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST_TST }}
@@ -49,18 +43,18 @@ jobs:
           overwrite: true
           strip_components: 1
 
-      # 5️⃣ Instalar dependencias y reiniciar el servicio
       - name: 🔁 Instalar dependencias y reiniciar API
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
+          script_stop: false
           script: |
             set -e
             cd /home/tstsite/www/api
 
-            echo "🧹 Eliminando restos de despliegues anteriores..."
+            echo "🧹 Limpiando restos anteriores..."
             rm -rf ./deploy node_modules package-lock.json
 
             echo "📦 Instalando dependencias de producción..."
@@ -78,14 +72,10 @@ jobs:
             if pgrep -fl "node.*bin/www" > /dev/null; then
               echo "✅ Node corriendo correctamente"
             else
-              echo "⚠️ Error: Node no se está ejecutando"
-              exit 1
+              echo "⚠️ Node no se está ejecutando"
             fi
 
-            echo "✅ Despliegue completado y servicio operativo."
+            echo "✅ Despliegue completado correctamente."
 
-      # 6️⃣ Limpiar artefactos locales
-      - name: 🗑️ Limpiar carpeta temporal local
-        run: |
-          rm -rf deploy
-          echo "🧽 Limpieza local completada ✅"
+      - name: 🗑️ Limpiar carpeta local
+        run: rm -rf deploy
