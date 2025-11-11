@@ -34,7 +34,7 @@ jobs:
                     ./ ./deploy/
 
       # 4️⃣ Subir archivos vía SCP
-      - name: 🚀 Subir archivos a AlwaysData por SSH
+      - name: 🚀 Subir archivos a servior por SSH
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST_TST }}
@@ -46,7 +46,7 @@ jobs:
           strip_components: 1
 
       # 5️⃣ Limpiar, instalar dependencias y reiniciar servicio
-      - name: 🔁 Limpiar, instalar y reiniciar servicio en AlwaysData
+      - name: 🔁 Limpiar, instalar y reiniciar servicio en servidor
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST_TST }}
@@ -82,9 +82,24 @@ jobs:
 
             echo "✅ API desplegada y servicio reiniciado correctamente."
 
-      # 6️⃣ Limpiar carpeta deploy local
-      - name: 🗑️ Eliminar carpeta de despliegue local
+      # 6️⃣ Limpiar carpeta temporal de despliegue local
+      - name: 🗑️ Eliminar carpeta temporal de despliegue local
         run: |
           cd $GITHUB_WORKSPACE
           rm -rf deploy
-          echo "✅ Carpeta deploy eliminada correctamente"
+          echo "✅ Carpeta temporal de despliegue eliminada correctamente"
+
+      # 7️⃣ Limpiar carpeta temporal de despliegue en el servidor remoto
+      - name: 🧹 Eliminar carpeta temporal de despliegue remota
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SSH_HOST_TST }}
+          username: ${{ secrets.SSH_USER_TST }}
+          key: ${{ secrets.SSH_KEY_TST }}
+          script: |
+            if [ -d "/home/tstsite/www/api/deploy" ]; then
+              rm -rf /home/tstsite/www/api/deploy
+              echo "✅ Carpeta temporal de despliegue remota eliminada correctamente"
+            else
+              echo "ℹ️ Carpeta temporal de despliegue remota no existe, no hay nada que eliminar"
+            fi
