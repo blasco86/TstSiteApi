@@ -52,25 +52,24 @@ jobs:
           host: ${{ secrets.SSH_HOST_TST }}
           username: ${{ secrets.SSH_USER_TST }}
           key: ${{ secrets.SSH_KEY_TST }}
-          fail_on_error: false
           script: |
             cd /home/tstsite/www/api
 
             echo "🧹 Limpiando instalación anterior..."
             rm -rf node_modules package-lock.json
-            npm cache clean --force   # Limpiar cache antes de instalar
+            npm cache clean --force
 
             echo "📦 Instalando dependencias de producción..."
             npm install --omit=dev --no-audit --no-fund --silent
 
-            echo "⚡ Optimizando permisos y entorno..."
+            echo "⚡ Ajustando permisos..."
             chmod -R 755 .
             export NODE_ENV=production
 
-            echo "♻️ Reiniciando servicio sin generar logs..."
+            echo "♻️ Reiniciando servicio Node..."
             pkill -f "node.*bin/www" || true
             nohup node bin/www >/dev/null 2>&1 &
-            disown
+            sleep 2
 
             if pgrep -fl "node.*bin/www" > /dev/null; then
               echo "✅ Node está corriendo correctamente"
@@ -83,8 +82,9 @@ jobs:
             echo "🗑️ Carpeta deploy remota eliminada correctamente."
 
             echo "🧹 Limpiando cache después de instalar..."
-            npm cache clean --force   # Limpiar cache después de instalar
+            npm cache clean --force
 
+            echo "🕒 $(date '+%Y-%m-%d %H:%M:%S') - Despliegue completado con éxito" >> /home/tstsite/www/api/deploy.log
             echo "✅ API desplegada y servicio reiniciado correctamente."
 
       # 6️⃣ Limpiar carpeta deploy local
