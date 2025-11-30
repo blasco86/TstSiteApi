@@ -15,7 +15,6 @@ const allowedOrigins = [
     'http://localhost',
     'http://127.0.0.1',
     'https://tstsite.alwaysdata.net',
-    'http://tstsite.alwaysdata.net',
 ];
 
 app.use(cors({
@@ -56,7 +55,7 @@ app.use('/catalog', catalogRoutes);
 app.get('/favicon.ico', (_, res) => res.status(204));
 
 // Manejo de errores
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     console.error('[Server Error]', err?.message || err);
     res.status(500).json({ resultado: 'error', mensaje: 'Error interno del servidor' });
 });
