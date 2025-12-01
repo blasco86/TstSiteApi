@@ -2,7 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
-
+import { decryptBodyMiddleware } from './utils/cryptoPayload.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import catalogRoutes from './routes/catalog.js';
@@ -39,6 +39,7 @@ app.use(cors({
 
 // --- Middlewares generales ---
 app.use(express.json({ limit: '50kb' }));
+app.use(decryptBodyMiddleware);
 app.use(helmet());
 
 // Rate limit global opcional
