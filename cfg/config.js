@@ -22,6 +22,12 @@ export const Config = {
     JWT_EXPIRATION_DELTA: parseInt(envData.JWT_MINUTES || '30', 10) * 60,
     JWT_ISSUER: envData.JWT_ISSUER || 'tstsite',
     JWT_AUDIENCE: envData.JWT_AUDIENCE || 'tstsite-api',
+
+    // 🔐 Flag para habilitar/deshabilitar encriptación de payloads
+    ENCRYPTION_ENABLED: envData.ENCRYPTION_ENABLED === 'true' || false,
+    // 🔓 Flag para permitir requests sin encriptar cuando la encriptación está habilitada
+    ALLOW_UNENCRYPTED: envData.ALLOW_UNENCRYPTED === 'true' || true,
+
     DB_CONFIG: {
         host: envData.DB_HOST,
         port: parseInt(envData.DB_PORT || '5432', 10),
