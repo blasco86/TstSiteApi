@@ -13,17 +13,27 @@ const app = express();
 
 // 🔗 CORS
 const allowedOrigins = [
+    'http://localhost:8080',
     'http://localhost:8081',
+    'http://localhost:3001',
     'http://localhost',
     'http://127.0.0.1',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:8081',
     'https://tstsite.alwaysdata.net',
 ];
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Permitir peticiones sin origin (como Postman, curl, apps nativas)
+        if (!origin) {
+            // console.log('[CORS] ✅ Petición sin origin permitida');
             return callback(null, true);
         }
-        console.warn('[CORS] Origen bloqueado:', origin);
+        if (allowedOrigins.includes(origin)) {
+            // console.log('[CORS] ✅ Origen permitido:', origin);
+            return callback(null, true);
+        }
+        // console.warn('[CORS] ❌ Origen bloqueado:', origin);
         return callback(new Error('Origen no permitido por CORS: ' + origin));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -46,8 +56,8 @@ app.use(globalLimiter);
 // 🗺️ Rutas
 app.get('/', (_, res) => res.json({
     resultado: 'ok',
-    mensaje: 'API TstSite funcionando',
-    version: '2.1',
+    mensaje: 'API TstSite operativo',
+    version: '2.3',
     encryption_enabled: Config.ENCRYPTION_ENABLED,
     allow_unencrypted: Config.ALLOW_UNENCRYPTED
 }));
