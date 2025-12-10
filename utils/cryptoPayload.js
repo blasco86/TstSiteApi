@@ -4,6 +4,12 @@ import { Config } from '../cfg/config.js';
 /**
  * 🔐 Sistema de encriptación bidireccional para payloads de la API
  * Usa AES-256-GCM con claves derivadas de PBKDF2
+ *
+ * FORMATO COMPATIBLE CON KOTLIN MULTIPLATFORM:
+ * Base64( salt(32 bytes) + iv(12 bytes) + ciphertext+authTag )
+ *
+ * El authTag (16 bytes) está incluido automáticamente al final del ciphertext
+ * por cipher.final() en ambas implementaciones (Node.js y Kotlin)
  */
 
 // Constantes de encriptación
@@ -34,23 +40,26 @@ export function decryptPayload(encryptedData) {
     try {
         const buffer = Buffer.from(encryptedData, 'base64');
 
-        if (buffer.length < SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH) {
-            throw new Error('Payload encriptado demasiado corto');
+        // Estructura: salt(32) + iv(12) + ciphertext+authTag
+        const minLength = SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH;
+
+        if (buffer.length < minLength) {
+            throw new Error(`Payload demasiado corto: ${buffer.length} bytes (mínimo ${minLength})`);
         }
 
+        // Extraer componentes
         const salt = buffer.subarray(0, SALT_LENGTH);
         const iv = buffer.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
-        const authTag = buffer.subarray(
-            SALT_LENGTH + IV_LENGTH,
-            SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH
-        );
-        const ciphertext = buffer.subarray(SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH);
+        // El resto es ciphertext + authTag (el authTag está al final automáticamente)
+        const ciphertextAndTag = buffer.subarray(SALT_LENGTH + IV_LENGTH);
 
+        // Derivar clave
         const key = deriveKey(salt);
-        const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-        decipher.setAuthTag(authTag);
 
-        let decrypted = decipher.update(ciphertext);
+        // Desencriptar
+        const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+
+        let decrypted = decipher.update(ciphertextAndTag);
         decrypted = Buffer.concat([decrypted, decipher.final()]);
 
         return JSON.parse(decrypted.toString('utf8'));
@@ -75,8 +84,7 @@ export function encryptPayload(data) {
         let encrypted = cipher.update(plaintext, 'utf8');
         encrypted = Buffer.concat([encrypted, cipher.final()]);
 
-        const authTag = cipher.getAuthTag();
-        const result = Buffer.concat([salt, iv, authTag, encrypted]);
+        const result = Buffer.concat([salt, iv, encrypted]);
 
         return result.toString('base64');
     } catch (err) {
@@ -119,6 +127,8 @@ export function decryptBodyMiddleware(req, res, next) {
     // Desencriptar payload
     try {
         console.log('🔓 Desencriptando payload entrante...');
+        console.log('🔍 Longitud del payload Base64:', req.body.encryptedPayload.length);
+
         const decrypted = decryptPayload(req.body.encryptedPayload);
 
         // Validar timestamp si existe
@@ -137,6 +147,7 @@ export function decryptBodyMiddleware(req, res, next) {
         console.log('✅ Payload desencriptado correctamente');
         next();
     } catch (err) {
+        console.error('❌ Error al desencriptar:', err.message);
         return res.status(400).json({
             resultado: 'error',
             mensaje: 'Error al desencriptar payload',
@@ -147,14 +158,8 @@ export function decryptBodyMiddleware(req, res, next) {
 
 /**
  * 🔐 Middleware para encriptar respuestas salientes
- * Uso: app.use(encryptResponseMiddleware);
  */
 export function encryptResponseMiddleware(req, res, next) {
-    // Solo encriptar si:
-    // 1. La encriptación está habilitada
-    // 2. La request venía encriptada (o se fuerza)
-    // 3. El método es POST/PUT (no GET)
-
     if (!Config.ENCRYPTION_ENABLED) {
         return next();
     }
@@ -164,10 +169,6 @@ export function encryptResponseMiddleware(req, res, next) {
 
     // Sobrescribir res.json para encriptar
     res.json = function(data) {
-        // No encriptar si:
-        // - La request no venía encriptada y no se permite forzar
-        // - Es un GET
-        // - El body está vacío
         const shouldEncrypt = req.wasEncrypted &&
             req.method !== 'GET' &&
             data &&
@@ -186,7 +187,6 @@ export function encryptResponseMiddleware(req, res, next) {
             });
         } catch (err) {
             console.error('[Response Encryption Error]', err.message);
-            // Si falla la encriptación, enviar sin encriptar
             return originalJson(data);
         }
     };
@@ -196,7 +196,6 @@ export function encryptResponseMiddleware(req, res, next) {
 
 /**
  * 🔐 Helper para encriptar respuestas manualmente
- * Uso en controllers: return res.json(encryptResponse(data));
  */
 export function encryptResponse(data) {
     if (!Config.ENCRYPTION_ENABLED) {
