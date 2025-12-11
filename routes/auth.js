@@ -9,16 +9,23 @@ import { getDbConnection } from '../cfg/db.js';
 
 const router = express.Router();
 
-// 🧱 Limitador de intentos de login
+/**
+ * 🧱 Limitador de intentos de login para prevenir ataques de fuerza bruta.
+ */
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { resultado: 'error', mensaje: 'Demasiados intentos. Prueba más tarde.' },
+    message: { resultado: 'error', mensaje: 'Demasiados intentos de acceso. Inténtelo de nuevo más tarde.' },
 });
 
-// 🔐 Generar JWT a partir de la info devuelta por fn_login
+/**
+ * generateToken
+ * 🔐 Genera un token JWT a partir de la información del usuario.
+ * @param {object} userInfo - La información del usuario.
+ * @returns {string} - El token JWT generado.
+ */
 const generateToken = ({ p_id_usuario, p_usuario, p_perfil }) => {
     const now = Math.floor(Date.now() / 1000);
     return jwt.sign(
@@ -37,10 +44,33 @@ const generateToken = ({ p_id_usuario, p_usuario, p_perfil }) => {
     );
 };
 
-// 🧩 LOGIN
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: 🧩 Inicia sesión en la aplicación.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Inicio de sesión exitoso.
+ *       400:
+ *         description: Usuario y contraseña necesarios.
+ *       401:
+ *         description: Credenciales incorrectas.
+ */
 router.post('/login', apiKeyRequired, loginLimiter, async (req, res, next) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ resultado: 'error', mensaje: 'Usuario y contraseña necesarios' });
+    if (!username || !password) return res.status(400).json({ resultado: 'error', mensaje: 'El nombre de usuario y la contraseña son obligatorios' });
 
     let client;
     try {
@@ -48,7 +78,7 @@ router.post('/login', apiKeyRequired, loginLimiter, async (req, res, next) => {
         const { rows } = await client.query('SELECT fn_login($1, $2) AS result', [username, password]);
         const result = rows?.[0]?.result;
 
-        if (!result) return res.status(500).json({ resultado: 'error', mensaje: 'Respuesta inesperada de la base de datos' });
+        if (!result) return res.status(500).json({ resultado: 'error', mensaje: 'Respuesta inesperada del servidor de datos' });
 
         const parsed = typeof result === 'string' ? JSON.parse(result) : result;
 
@@ -69,22 +99,42 @@ router.post('/login', apiKeyRequired, loginLimiter, async (req, res, next) => {
     }
 });
 
-// 🔍 VALIDAR TOKEN
+/**
+ * @swagger
+ * /auth/validate:
+ *   post:
+ *     summary: 🔍 Valida un token JWT.
+ *     responses:
+ *       200:
+ *         description: Token válido.
+ *       401:
+ *         description: Token no válido o expirado.
+ */
 router.post('/validate', apiKeyRequired, (req, res) => {
     const authHeader = req.headers['authorization'] || '';
-    if (!authHeader.startsWith('Bearer ')) return res.status(400).json({ resultado: 'error', mensaje: 'Token requerido' });
+    if (!authHeader.startsWith('Bearer ')) return res.status(400).json({ resultado: 'error', mensaje: 'Se requiere un token de autenticación' });
 
     const token = authHeader.split(' ')[1];
     try {
         const payload = jwt.verify(token, Config.SECRET_KEY);
-        if (revokedTokens.has(payload.jti)) return res.status(401).json({ resultado: 'error', mensaje: 'Token revocado' });
+        if (revokedTokens.has(payload.jti)) return res.status(401).json({ resultado: 'error', mensaje: 'El token ha sido revocado' });
         res.json({ valid: true, user: payload });
     } catch {
-        res.status(401).json({ resultado: 'error', mensaje: 'Token no valido o expirado' });
+        res.status(401).json({ resultado: 'error', mensaje: 'El token no es válido o ha expirado' });
     }
 });
 
-// 👤 PERFIL
+/**
+ * @swagger
+ * /auth/profile:
+ *   get:
+ *     summary: 👤 Obtiene el perfil del usuario autenticado.
+ *     responses:
+ *       200:
+ *         description: Perfil del usuario.
+ *       401:
+ *         description: No autorizado.
+ */
 router.get('/profile', apiKeyRequired, tokenRequired, (req, res) => {
     res.json({
         resultado: 'ok',
@@ -93,10 +143,20 @@ router.get('/profile', apiKeyRequired, tokenRequired, (req, res) => {
     });
 });
 
-// 🚪 LOGOUT
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: 🚪 Cierra la sesión del usuario.
+ *     responses:
+ *       200:
+ *         description: Sesión cerrada correctamente.
+ *       401:
+ *         description: No autorizado.
+ */
 router.post('/logout', apiKeyRequired, tokenRequired, (req, res) => {
     revokedTokens.add(req.user.jti);
-    res.json({ resultado: 'ok', message: 'Sesión cerrada correctamente' });
+    res.json({ resultado: 'ok', message: 'La sesión se ha cerrado correctamente' });
 });
 
 export default router;
