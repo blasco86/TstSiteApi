@@ -5,7 +5,31 @@ import { getDbConnection } from '../cfg/db.js';
 
 const router = express.Router();
 
-// 🚀 Gestión de usuarios
+/**
+ * @swagger
+ * /users/{accion}:
+ *   post:
+ *     summary: 🚀 Gestión de usuarios.
+ *     parameters:
+ *       - in: path
+ *         name: accion
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Operación realizada con éxito.
+ *       400:
+ *         description: Error en la solicitud.
+ *       500:
+ *         description: Error en el servidor.
+ */
 router.post('/:accion', apiKeyRequired, tokenRequired, async (req, res, next) => {
     const { accion } = req.params;
     const datos = req.body;

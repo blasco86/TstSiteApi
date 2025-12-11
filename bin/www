@@ -5,6 +5,12 @@ import debugLib from 'debug';
 
 const debug = debugLib('TstSiteApi:server');
 
+/**
+ *  normalizePort
+ * 🔢 Normaliza el puerto de la aplicación.
+ * @param {string} val - El valor del puerto.
+ * @returns {(number|string|boolean)} - El puerto normalizado.
+ */
 const port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
@@ -13,11 +19,20 @@ if (process.env.TRUST_PROXY === 'true') {
     app.set('trust proxy', true);
 }
 
+/**
+ * 🚀 Creación del servidor HTTP.
+ */
 const server = http.createServer(app);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
 
+/**
+ * normalizePort
+ * 🔢 Normaliza el puerto de la aplicación.
+ * @param {string} val - El valor del puerto.
+ * @returns {(number|string|boolean)} - El puerto normalizado.
+ */
 function normalizePort(val) {
     const port = parseInt(val, 10);
     if (isNaN(port)) return val;
@@ -25,6 +40,11 @@ function normalizePort(val) {
     return false;
 }
 
+/**
+ * onError
+ * 💣 Manejador de errores del servidor.
+ * @param {object} error - El objeto de error.
+ */
 function onError(error) {
     if (error.syscall !== 'listen') throw error;
     const bind = typeof port === 'string' ? `Pipe ${port}` : `Port ${port}`;
@@ -42,6 +62,10 @@ function onError(error) {
     }
 }
 
+/**
+ * onListening
+ * 🎧 Manejador de eventos de escucha del servidor.
+ */
 function onListening() {
     const addr = server.address();
     const bind = typeof addr === 'string' ? `pipe ${addr}` : `port ${addr.port}`;

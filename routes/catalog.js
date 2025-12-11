@@ -6,9 +6,15 @@ import { getDbConnection } from '../cfg/db.js';
 const router = express.Router();
 
 /**
- * 🚀 Catálogo de productos
- * GET /catalog
- * Devuelve la estructura completa del catálogo: tipos, subtipos y productos
+ * @swagger
+ * /catalog:
+ *   post:
+ *     summary: 🚀 Obtiene el catálogo de productos.
+ *     responses:
+ *       200:
+ *         description: Catálogo de productos.
+ *       500:
+ *         description: Error en el servidor.
  */
 router.post('/', apiKeyRequired, tokenRequired, async (req, res, next) => {
     let client;
@@ -22,7 +28,7 @@ router.post('/', apiKeyRequired, tokenRequired, async (req, res, next) => {
         if (!rows || rows.length === 0) {
             return res
                 .status(500)
-                .json({ resultado: 'error', mensaje: 'Respuesta vacía de la base de datos' });
+                .json({ resultado: 'error', mensaje: 'Respuesta vacía del servidor de datos' });
         }
 
         const rawResult = rows[0].result;
@@ -48,7 +54,7 @@ router.post('/', apiKeyRequired, tokenRequired, async (req, res, next) => {
             console.error('[Catalog JSON Error]', e.message);
             return res
                 .status(500)
-                .json({ resultado: 'error', mensaje: 'Formato de catálogo inválido' });
+                .json({ resultado: 'error', mensaje: 'El formato del catálogo no es válido' });
         }
 
         // Verificamos que el catálogo sea un array.
@@ -57,7 +63,7 @@ router.post('/', apiKeyRequired, tokenRequired, async (req, res, next) => {
         if (!Array.isArray(catalogo)) {
             return res
                 .status(500)
-                .json({ resultado: 'error', mensaje: 'El catálogo no es un array' });
+                .json({ resultado: 'error', mensaje: 'El catálogo no tiene el formato de array esperado' });
         }
 
         return res.json({
