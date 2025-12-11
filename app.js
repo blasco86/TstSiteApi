@@ -9,9 +9,15 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import catalogRoutes from './routes/catalog.js';
 
+/**
+ * 🚀 Inicialización de la aplicación Express.
+ */
 const app = express();
 
-// 🔗 CORS
+/**
+ * 🔗 Configuración de CORS.
+ * @type {string[]}
+ */
 const allowedOrigins = [
     'http://localhost:8080',
     'http://localhost:8081',
@@ -34,29 +40,39 @@ app.use(cors({
             return callback(null, true);
         }
         // console.warn('[CORS] ❌ Origen bloqueado:', origin);
-        return callback(new Error('Origen no permitido por CORS: ' + origin));
+        return callback(new Error('Origen no permitido por el CORS: ' + origin));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization'],
     credentials: true
 }));
 
-// ⚙️ Middlewares generales
+/**
+ * ⚙️ Middlewares generales de la aplicación.
+ */
 app.use(express.json({ limit: '50kb' }));
-// 🔐 Middleware de desencriptación de requests (ANTES de las rutas)
+/**
+ * 🔐 Middleware de desencriptación de requests (ANTES de las rutas).
+ */
 app.use(decryptBodyMiddleware);
-// 🔐 Middleware de encriptación de responses (ANTES de las rutas)
+/**
+ * 🔐 Middleware de encriptación de responses (ANTES de las rutas).
+ */
 app.use(encryptResponseMiddleware);
 app.use(helmet());
 
-// 🚦 Límite de tasa global
+/**
+ * 🚦 Límite de tasa global para prevenir ataques de fuerza bruta.
+ */
 const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 app.use(globalLimiter);
 
-// 🗺️ Rutas
+/**
+ * 🗺️ Definición de las rutas de la API.
+ */
 app.get('/', (_, res) => res.json({
     resultado: 'ok',
-    mensaje: 'API TstSite operativo',
+    mensaje: 'API TstSite operativa',
     version: '2.3',
     encryption_enabled: Config.ENCRYPTION_ENABLED,
     allow_unencrypted: Config.ALLOW_UNENCRYPTED
@@ -65,13 +81,17 @@ app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/catalog', catalogRoutes);
 
-// ⭐ Favicon
+/**
+ * ⭐ Ruta para el favicon.
+ */
 app.get('/favicon.ico', (_, res) => res.status(204));
 
-// ⚠️ Manejo de errores
+/**
+ * ⚠️ Middleware para el manejo de errores.
+ */
 app.use((err, req, res, next) => {
     console.error('[Server Error]', err?.message || err);
-    res.status(500).json({ resultado: 'error', mensaje: 'Error interno del servidor' });
+    res.status(500).json({ resultado: 'error', mensaje: 'Error interno en el servidor' });
 });
 
 export default app;
