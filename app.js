@@ -30,16 +30,9 @@ const allowedOrigins = [
 ];
 app.use(cors({
     origin: (origin, callback) => {
-        // Permitir peticiones sin origin (como Postman, curl, apps nativas)
-        if (!origin) {
-            // console.log('[CORS] ✅ Petición sin origin permitida');
+        if (!origin || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
-        if (allowedOrigins.includes(origin)) {
-            // console.log('[CORS] ✅ Origen permitido:', origin);
-            return callback(null, true);
-        }
-        // console.warn('[CORS] ❌ Origen bloqueado:', origin);
         return callback(new Error('Origen no permitido por el CORS: ' + origin));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -51,15 +44,31 @@ app.use(cors({
  * ⚙️ Middlewares generales de la aplicación.
  */
 app.use(express.json({ limit: '50kb' }));
-/**
- * 🔐 Middleware de desencriptación de requests (ANTES de las rutas).
- */
 app.use(decryptBodyMiddleware);
-/**
- * 🔐 Middleware de encriptación de responses (ANTES de las rutas).
- */
 app.use(encryptResponseMiddleware);
-app.use(helmet());
+
+/**
+ * 🛡️ Configuración de seguridad de cabeceras HTTP con Helmet.
+ * Esto ayuda a proteger la aplicación de vulnerabilidades web conocidas.
+ */
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"], // Solo permite contenido del mismo origen.
+            scriptSrc: ["'self'"], // Solo scripts del mismo origen.
+            styleSrc: ["'self'"],
+            imgSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"], // No permite plugins como Flash.
+            upgradeInsecureRequests: [], // Pide a los navegadores que usen HTTPS.
+        },
+    },
+    frameguard: { action: 'deny' }, // Evita que la página se muestre en un <iframe>.
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // Fuerza HTTPS por un año.
+    noSniff: true, // Evita que el navegador "adivine" el tipo de contenido.
+    xssFilter: true, // Activa el filtro de XSS de los navegadores.
+}));
+
 
 /**
  * 🚦 Límite de tasa global para prevenir ataques de fuerza bruta.
@@ -73,9 +82,7 @@ app.use(globalLimiter);
 app.get('/', (_, res) => res.json({
     resultado: 'ok',
     mensaje: 'API TstSite operativa',
-    version: '2.3',
-    encryption_enabled: Config.ENCRYPTION_ENABLED,
-    allow_unencrypted: Config.ALLOW_UNENCRYPTED
+    version: '2.5'
 }));
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);

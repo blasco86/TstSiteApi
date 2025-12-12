@@ -1,7 +1,7 @@
 import express from 'express';
 import { tokenRequired } from '../middlewares/tokenRequired.js';
 import { apiKeyRequired } from '../middlewares/apiKeyRequired.js';
-import { getDbConnection } from '../cfg/db.js';
+import { query } from '../cfg/db.js';
 
 const router = express.Router();
 
@@ -17,11 +17,8 @@ const router = express.Router();
  *         description: Error en el servidor.
  */
 router.post('/', apiKeyRequired, tokenRequired, async (req, res, next) => {
-    let client;
     try {
-        client = await getDbConnection();
-
-        const { rows } = await client.query(
+        const { rows } = await query(
             'SELECT tstsite_exe.fn_menu_catalogo_json() AS result'
         );
 
@@ -74,14 +71,6 @@ router.post('/', apiKeyRequired, tokenRequired, async (req, res, next) => {
     } catch (err) {
         console.error('[DB Catalog Error]', err.message || err);
         next(err);
-    } finally {
-        if (client) {
-            try {
-                client.release();
-            } catch {
-                // ignoramos errores al liberar
-            }
-        }
     }
 });
 
