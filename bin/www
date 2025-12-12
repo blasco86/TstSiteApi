@@ -1,9 +1,6 @@
 #!/usr/bin/.env node
 import app from '../app.js';
 import http from 'http';
-import debugLib from 'debug';
-
-const debug = debugLib('TstSiteApi:server');
 
 /**
  *  normalizePort
@@ -69,6 +66,5 @@ function onError(error) {
 function onListening() {
     const addr = server.address();
     const bind = typeof addr === 'string' ? `pipe ${addr}` : `port ${addr.port}`;
-    debug(`Listening on ${bind}`);
     console.log(`✅ Servidor iniciado en ${bind}`);
 }
