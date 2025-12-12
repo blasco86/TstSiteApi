@@ -2,8 +2,6 @@ import express from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
-
-import { Config } from './cfg/config.js';
 import { decryptBodyMiddleware, encryptResponseMiddleware } from './utils/cryptoPayload.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
