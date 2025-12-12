@@ -59,9 +59,9 @@ export const Config = {
     JWT_AUDIENCE: envData.JWT_AUDIENCE || 'tstsite-api',
 
     // 🔐 Flag para habilitar/deshabilitar encriptación de payloads
-    ENCRYPTION_ENABLED: envData.ENCRYPTION_ENABLED === 'true' || false,
+    ENCRYPTION_ENABLED: envData.ENCRYPTION_ENABLED === 'true',
     // 🔓 Flag para permitir requests sin encriptar cuando la encriptación está habilitada
-    ALLOW_UNENCRYPTED: envData.ALLOW_UNENCRYPTED === 'true' || true,
+    ALLOW_UNENCRYPTED: envData.ALLOW_UNENCRYPTED !== 'false',
 
     DB_CONFIG: {
         host: envData.DB_HOST,

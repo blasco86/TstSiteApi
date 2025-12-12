@@ -106,18 +106,8 @@ router.post('/login', apiKeyRequired, loginLimiter, async (req, res, next) => {
  *       401:
  *         description: Token no válido o expirado.
  */
-router.post('/validate', apiKeyRequired, (req, res) => {
-    const authHeader = req.headers['authorization'] || '';
-    if (!authHeader.startsWith('Bearer ')) return res.status(400).json({ resultado: 'error', mensaje: 'Se requiere un token de autenticación' });
-
-    const token = authHeader.split(' ')[1];
-    try {
-        const payload = jwt.verify(token, Config.SECRET_KEY);
-        if (revokedTokens.has(payload.jti)) return res.status(401).json({ resultado: 'error', mensaje: 'El token ha sido revocado' });
-        res.json({ valid: true, user: payload });
-    } catch {
-        res.status(401).json({ resultado: 'error', mensaje: 'El token no es válido o ha expirado' });
-    }
+router.post('/validate', apiKeyRequired, tokenRequired, (req, res) => {
+    res.json({ valid: true, user: req.user });
 });
 
 /**
@@ -131,7 +121,7 @@ router.post('/validate', apiKeyRequired, (req, res) => {
  *       401:
  *         description: No autorizado.
  */
-router.get('/profile', apiKeyRequired, tokenRequired, (req, res) => {
+router.post('/profile', apiKeyRequired, tokenRequired, (req, res) => {
     res.json({
         resultado: 'ok',
         message: 'Perfil del usuario autenticado',

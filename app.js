@@ -13,9 +13,30 @@ import catalogRoutes from './routes/catalog.js';
 const app = express();
 
 /**
- * 🔗 Configuración de CORS.
- * @type {string[]}
+ * 🛡️ Middlewares de seguridad y configuración general.
+ * Se aplican en un orden específico para garantizar la seguridad y el rendimiento.
  */
+
+// 1. Helmet: Ayuda a proteger la aplicación de vulnerabilidades web conocidas estableciendo cabeceras HTTP seguras.
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"], // Solo permite contenido del mismo origen.
+            scriptSrc: ["'self'"], // Solo scripts del mismo origen.
+            styleSrc: ["'self'"],
+            imgSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"], // No permite plugins como Flash.
+            upgradeInsecureRequests: [], // Pide a los navegadores que usen HTTPS.
+        },
+    },
+    frameguard: { action: 'deny' }, // Evita que la página se muestre en un <iframe>.
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // Fuerza HTTPS por un año.
+    noSniff: true, // Evita que el navegador "adivine" el tipo de contenido.
+    xssFilter: true, // Activa el filtro de XSS de los navegadores.
+}));
+
+// 2. CORS: Permite o deniega solicitudes de diferentes orígenes.
 const allowedOrigins = [
     'http://localhost:8080',
     'http://localhost:8081',
@@ -38,41 +59,17 @@ app.use(cors({
     credentials: true
 }));
 
-/**
- * ⚙️ Middlewares generales de la aplicación.
- */
+// 3. Rate Limiter: Limita la tasa de solicitudes para prevenir ataques de fuerza bruta.
+const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+app.use(globalLimiter);
+
+// 4. Express JSON Parser: Parsea los cuerpos de las solicitudes entrantes con formato JSON.
 app.use(express.json({ limit: '50kb' }));
+
+// 5. Middlewares de encriptación: Desencripta el cuerpo de la solicitud y encripta la respuesta si es necesario.
 app.use(decryptBodyMiddleware);
 app.use(encryptResponseMiddleware);
 
-/**
- * 🛡️ Configuración de seguridad de cabeceras HTTP con Helmet.
- * Esto ayuda a proteger la aplicación de vulnerabilidades web conocidas.
- */
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"], // Solo permite contenido del mismo origen.
-            scriptSrc: ["'self'"], // Solo scripts del mismo origen.
-            styleSrc: ["'self'"],
-            imgSrc: ["'self'"],
-            fontSrc: ["'self'"],
-            objectSrc: ["'none'"], // No permite plugins como Flash.
-            upgradeInsecureRequests: [], // Pide a los navegadores que usen HTTPS.
-        },
-    },
-    frameguard: { action: 'deny' }, // Evita que la página se muestre en un <iframe>.
-    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // Fuerza HTTPS por un año.
-    noSniff: true, // Evita que el navegador "adivine" el tipo de contenido.
-    xssFilter: true, // Activa el filtro de XSS de los navegadores.
-}));
-
-
-/**
- * 🚦 Límite de tasa global para prevenir ataques de fuerza bruta.
- */
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
-app.use(globalLimiter);
 
 /**
  * 🗺️ Definición de las rutas de la API.
