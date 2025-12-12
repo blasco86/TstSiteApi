@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { Config } from '../cfg/config.js';
 import { apiKeyRequired } from '../middlewares/apiKeyRequired.js';
 import { tokenRequired, revokedTokens } from '../middlewares/tokenRequired.js';
-import { getDbConnection } from '../cfg/db.js';
+import { query } from '../cfg/db.js';
 
 const router = express.Router();
 
@@ -72,10 +72,8 @@ router.post('/login', apiKeyRequired, loginLimiter, async (req, res, next) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ resultado: 'error', mensaje: 'El nombre de usuario y la contraseña son obligatorios' });
 
-    let client;
     try {
-        client = await getDbConnection();
-        const { rows } = await client.query('SELECT fn_login($1, $2) AS result', [username, password]);
+        const { rows } = await query('SELECT tstsite_exe.fn_login($1, $2) AS result', [username, password]);
         const result = rows?.[0]?.result;
 
         if (!result) return res.status(500).json({ resultado: 'error', mensaje: 'Respuesta inesperada del servidor de datos' });
@@ -94,8 +92,6 @@ router.post('/login', apiKeyRequired, loginLimiter, async (req, res, next) => {
     } catch (err) {
         console.error('[Auth Error]', err.message);
         next(err);
-    } finally {
-        client?.release?.();
     }
 });
 
