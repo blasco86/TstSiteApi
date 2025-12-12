@@ -20,24 +20,32 @@ const tzRegex = /^[A-Za-z]+\/[A-Za-z_]+$/;
 const allowedDatestyles = new Set(['ISO, DMY', 'ISO, MDY', 'ISO, YMD']);
 
 /**
- * getDbConnection
- * 🤝 Obtiene una conexión a la base de datos.
- * @param {string} region - La zona horaria para la conexión.
- * @param {string} datestyle - El estilo de fecha para la conexión.
- * @returns {Promise<import('pg').PoolClient>} - Una promesa que se resuelve con un cliente de la base de datos.
+ * query
+ * 🚀 Ejecuta una consulta en la base de datos de forma segura, gestionando la conexión automáticamente.
+ * @param {string} text - La consulta SQL a ejecutar.
+ * @param {Array} [params] - Los parámetros para la consulta.
+ * @param {object} [options] - Opciones adicionales como la región o el estilo de fecha.
+ * @param {string} [options.region='Europe/Madrid'] - La zona horaria para la conexión.
+ * @param {string} [options.datestyle='ISO, DMY'] - El estilo de fecha para la conexión.
+ * @returns {Promise<import('pg').QueryResult>} - Una promesa que se resuelve con el resultado de la consulta.
  */
-export async function getDbConnection(region = 'Europe/Madrid', datestyle = 'ISO, DMY') {
+export async function query(text, params, options = {}) {
+    let { region = 'Europe/Madrid', datestyle = 'ISO, DMY' } = options;
+
     if (!tzRegex.test(region)) {
         region = 'Europe/Madrid';
     }
-    if (!allowedDatestyles.has(datestyle)) datestyle = 'ISO, DMY';
+    if (!allowedDatestyles.has(datestyle)) {
+        datestyle = 'ISO, DMY';
+    }
+
     const client = await pool.connect();
     try {
         await client.query(`SET TimeZone = '${region}'`);
         await client.query(`SET DateStyle = '${datestyle}'`);
-        return client;
-    } catch (err) {
+        return await client.query(text, params);
+    } finally {
+        // 🤫 Nos aseguramos de que la conexión SIEMPRE se libere.
         client.release();
-        throw err;
     }
 }
