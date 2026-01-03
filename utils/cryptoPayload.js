@@ -33,14 +33,16 @@ function deriveKey(salt) {
  * @returns {object} - El payload desencriptado.
  */
 export function decryptPayload(encryptedData) {
+    const buffer = Buffer.from(encryptedData, 'base64');
+    const minLength = SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH;
+
+    if (buffer.length < minLength) {
+        const msg = `El contenido cifrado es demasiado corto: ${buffer.length} bytes`;
+        console.error('[Decrypt Error]', msg);
+        throw new Error('Fallo al desencriptar el contenido: ' + msg);
+    }
+
     try {
-        const buffer = Buffer.from(encryptedData, 'base64');
-
-        const minLength = SALT_LENGTH + IV_LENGTH + AUTH_TAG_LENGTH;
-        if (buffer.length < minLength) {
-            throw new Error(`El contenido cifrado es demasiado corto: ${buffer.length} bytes`);
-        }
-
         const salt = buffer.subarray(0, SALT_LENGTH);
         const iv = buffer.subarray(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
         const ciphertextWithTag = buffer.subarray(SALT_LENGTH + IV_LENGTH);
@@ -107,9 +109,9 @@ export function validateTimestamp(timestamp, maxAge = 5 * 60 * 1000) {
 /**
  * decryptBodyMiddleware
  * 🛡️ Middleware para desencriptar el cuerpo de la solicitud.
- * @param {object} req - El objeto de solicitud de Express.
- * @param {object} res - El objeto de respuesta de Express.
- * @param {function} next - La función para pasar al siguiente middleware.
+ * @param {import('express').Request & { wasEncrypted?: boolean }} req - El objeto de solicitud de Express.
+ * @param {import('express').Response} res - El objeto de respuesta de Express.
+ * @param {import('express').NextFunction} next - La función para pasar al siguiente middleware.
  */
 export function decryptBodyMiddleware(req, res, next) {
     if (!Config.ENCRYPTION_ENABLED) {
@@ -153,9 +155,9 @@ export function decryptBodyMiddleware(req, res, next) {
 /**
  * encryptResponseMiddleware
  * 🛡️ Middleware para encriptar la respuesta.
- * @param {object} req - El objeto de solicitud de Express.
- * @param {object} res - El objeto de respuesta de Express.
- * @param {function} next - La función para pasar al siguiente middleware.
+ * @param {import('express').Request & { wasEncrypted?: boolean }} req - El objeto de solicitud de Express.
+ * @param {import('express').Response} res - El objeto de respuesta de Express.
+ * @param {import('express').NextFunction} next - La función para pasar al siguiente middleware.
  */
 export function encryptResponseMiddleware(req, res, next) {
     if (!Config.ENCRYPTION_ENABLED) {

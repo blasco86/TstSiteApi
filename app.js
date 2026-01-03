@@ -86,12 +86,12 @@ app.use('/catalog', catalogRoutes);
 /**
  * ⭐ Ruta para el favicon.
  */
-app.get('/favicon.ico', (_, res) => res.status(204));
+app.get('/favicon.ico', (/** @type {import('express').Request} */ _, /** @type {import('express').Response} */ res) => res.sendStatus(204));
 
 /**
  * ⚠️ Middleware para el manejo de errores.
  */
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     console.error('[Server Error]', err?.message || err);
     res.status(500).json({ resultado: 'error', mensaje: 'Error interno en el servidor' });
 });
