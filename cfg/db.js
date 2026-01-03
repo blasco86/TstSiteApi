@@ -4,6 +4,7 @@ const { Pool } = pkg;
 
 /**
  * 🏊‍♂️ Pool de conexiones a la base de datos.
+ * @type {import('pg').Pool}
  */
 const pool = new Pool(Config.DB_CONFIG);
 
