@@ -118,10 +118,44 @@ export function decryptBodyMiddleware(req, res, next) {
         return next();
     }
 
+    // Si es una petición GET, no suele tener body, así que pasamos.
+    // (A menos que tu API use GET con body, lo cual es raro pero posible).
+    /*
+    if (req.method === 'GET') {
+        return next();
+    }
+    */
+
     if (!req.body?.encryptedPayload) {
         if (Config.ALLOW_UNENCRYPTED) {
             return next();
         }
+
+        // Si el cliente acepta HTML (es un navegador), devolvemos una página de error bonita con título.
+        if (req.accepts('html')) {
+            const errorResponse = {
+                resultado: 'error',
+                mensaje: 'Se requiere un contenido cifrado (encryptedPayload)'
+            };
+            return res.status(400).send(`
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>TstSite API</title>
+                    <style>
+                        body { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
+                        pre { background: #252526; padding: 15px; border-radius: 5px; border: 1px solid #3e3e42; overflow-x: auto; }
+                    </style>
+                </head>
+                <body>
+                    <h1>TstSite API - Error</h1>
+                    <pre>${JSON.stringify(errorResponse, null, 4)}</pre>
+                </body>
+                </html>
+            `);
+        }
+
         return res.status(400).json({
             resultado: 'error',
             mensaje: 'Se requiere un contenido cifrado (encryptedPayload)'
