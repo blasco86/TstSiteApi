@@ -23,7 +23,7 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"], // Solo permite contenido del mismo origen.
             scriptSrc: ["'self'"], // Solo scripts del mismo origen.
-            styleSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"], // Permitimos estilos en línea para la página de inicio.
             imgSrc: ["'self'"],
             fontSrc: ["'self'"],
             objectSrc: ["'none'"], // No permite plugins como Flash.
@@ -74,11 +74,37 @@ app.use(encryptResponseMiddleware);
 /**
  * 🗺️ Definición de las rutas de la API.
  */
-app.get('/', (_, res) => res.json({
-    resultado: 'ok',
-    mensaje: 'API TstSite operativa',
-    version: '2.5'
-}));
+app.get('/', (req, res) => {
+    const response = {
+        resultado: 'ok',
+        mensaje: 'API TstSite operativa',
+        version: '2.5'
+    };
+
+    // Si la solicitud viene de un navegador (acepta HTML), mostramos una página con título.
+    if (req.accepts('html')) {
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <title>TstSite API</title>
+                <style>
+                    body { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
+                    pre { background: #252526; padding: 15px; border-radius: 5px; border: 1px solid #3e3e42; overflow-x: auto; }
+                </style>
+            </head>
+            <body>
+                <h1>TstSite API</h1>
+                <pre>${JSON.stringify(response, null, 4)}</pre>
+            </body>
+            </html>
+        `);
+    } else {
+        res.json(response);
+    }
+});
+
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/catalog', catalogRoutes);
