@@ -22,7 +22,7 @@
     "morgan": "^1.10.1",
     "node-fetch": "^3.3.2",
     "pbkdf2": "^3.1.5",
-    "pg": "^8.17.1"
+    "pg": "^8.17.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
