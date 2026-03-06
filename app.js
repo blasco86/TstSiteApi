@@ -60,11 +60,15 @@ app.use(cors({
 }));
 
 // 3. Rate Limiter: Limita la tasa de solicitudes para prevenir ataques de fuerza bruta.
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { resultado: 'error', mensaje: 'Demasiadas peticiones desde esta IP.' }
+});
 app.use(globalLimiter);
 
 // 4. Express JSON Parser: Parsea los cuerpos de las solicitudes entrantes con formato JSON.
-app.use(express.json({ limit: '50kb' }));
+app.use(express.json({ limit: '1mb' }));
 
 // 5. Middlewares de encriptación: Desencripta el cuerpo de la solicitud y encripta la respuesta si es necesario.
 app.use(decryptBodyMiddleware);
@@ -75,13 +79,13 @@ app.use(encryptResponseMiddleware);
  * 🗺️ Definición de las rutas de la API.
  */
 app.get('/', (req, res) => {
-    const response = {
+    const status = {
         resultado: 'ok',
-        mensaje: 'API TstSite operativa',
-        version: '2.5'
+        mensaje: 'TstSite API Operativa',
+        version: '2.5.0',
+        entorno: process.env.NODE_ENV || 'production'
     };
 
-    // Si la solicitud viene de un navegador (acepta HTML), mostramos una página con título.
     if (req.accepts('html')) {
         res.send(`
             <!DOCTYPE html>
@@ -90,18 +94,26 @@ app.get('/', (req, res) => {
                 <meta charset="UTF-8">
                 <title>TstSite API</title>
                 <style>
-                    body { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
-                    pre { background: #252526; padding: 15px; border-radius: 5px; border: 1px solid #3e3e42; overflow-x: auto; }
+                    body { font-family: 'Courier New', monospace; background: #1a1a1a; color: #00ff41; padding: 40px; line-height: 1.6; }
+                    .container { max-width: 800px; margin: auto; border: 1px solid #333; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+                    h1 { border-bottom: 1px solid #333; padding-bottom: 10px; color: #fff; }
+                    pre { background: #000; padding: 15px; border-radius: 5px; overflow-x: auto; color: #00ff41; }
+                    .tag { color: #ffaa00; }
                 </style>
             </head>
             <body>
-                <h1>TstSite API</h1>
-                <pre>${JSON.stringify(response, null, 4)}</pre>
+                <div class="container">
+                    <h1>🚀 TstSite Backend Gateway</h1>
+                    <p>Estado del sistema: <span class="tag">ONLINE</span></p>
+                    <pre>${JSON.stringify(status, null, 4)}</pre>
+                    <hr style="border:0; border-top: 1px dashed #444;">
+                    <p style="font-size: 0.8em; color: #888;">Servidor configurado para entornos Multiplataforma (Android, JS, WasmJS)</p>
+                </div>
             </body>
             </html>
         `);
     } else {
-        res.json(response);
+        res.json(status);
     }
 });
 
