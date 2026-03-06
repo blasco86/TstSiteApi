@@ -3,14 +3,15 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import { Config } from '../cfg/config.js';
-import { apiKeyRequired } from '../middlewares/apiKeyRequired.js';
-import { tokenRequired, revokedTokens } from '../middlewares/tokenRequired.js';
+import { clientAuthMiddleware } from '../middlewares/clientAuthMiddleware.js';
+import { revokedTokens } from '../middlewares/tokenRequired.js';
 import { query } from '../cfg/db.js';
 
 const router = express.Router();
 
 /**
  * 🧱 Limitador de intentos de login para prevenir ataques de fuerza bruta.
+ * El login es público (sin API Key), así que el rate limit es la primera defensa.
  */
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
@@ -23,8 +24,10 @@ const loginLimiter = rateLimit({
 /**
  * generateToken
  * 🔐 Genera un token JWT a partir de la información del usuario.
- * @param {object} userInfo - La información del usuario.
- * @returns {string} - El token JWT generado.
+ * @param {object} user - Objeto con datos del usuario.
+ * @param {number} user.p_id_usuario - ID del usuario.
+ * @param {string} user.p_usuario - Nombre de usuario.
+ * @param {string} user.p_perfil - Perfil del usuario.
  */
 const generateToken = ({ p_id_usuario, p_usuario, p_perfil }) => {
     const now = Math.floor(Date.now() / 1000);
@@ -48,40 +51,32 @@ const generateToken = ({ p_id_usuario, p_usuario, p_perfil }) => {
  * @swagger
  * /auth/login:
  *   post:
- *     summary: 🧩 Inicia sesión en la aplicación.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Inicio de sesión exitoso.
- *       400:
- *         description: Usuario y contraseña necesarios.
- *       401:
- *         description: Credenciales incorrectas.
+ *     summary: 🔑 Inicia sesión en la aplicación.
+ *     description: >
+ *       Endpoint público. Protegido por CORS estricto + rate limiting.
+ *       No requiere API Key. Devuelve un JWT para usar en el resto de endpoints.
+ * @param {object} req - El objeto de solicitud de Express.
+ * @param {object} res - El objeto de respuesta de Express.
+ * @param {function} next - La función next de Express.
  */
-router.post('/login', apiKeyRequired, loginLimiter, async (req, res, next) => {
+router.post('/login', loginLimiter, async (req, res, next) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ resultado: 'error', mensaje: 'El nombre de usuario y la contraseña son obligatorios' });
+    if (!username || !password) {
+        return res.status(400).json({ resultado: 'error', mensaje: 'El nombre de usuario y la contraseña son obligatorios' });
+    }
 
     try {
         const { rows } = await query('SELECT tstsite_exe.fn_login($1, $2) AS result', [username, password]);
         const result = rows?.[0]?.result;
 
-        if (!result) return res.status(500).json({ resultado: 'error', mensaje: 'Respuesta inesperada del servidor de datos' });
+        if (!result) {
+            return res.status(500).json({ resultado: 'error', mensaje: 'Respuesta inesperada del servidor de datos' });
+        }
 
         const parsed = typeof result === 'string' ? JSON.parse(result) : result;
 
         if (parsed.resultado !== 'ok') {
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 500)); // anti-timing attack
             return res.status(401).json(parsed);
         }
 
@@ -100,28 +95,22 @@ router.post('/login', apiKeyRequired, loginLimiter, async (req, res, next) => {
  * /auth/validate:
  *   post:
  *     summary: 🔍 Valida un token JWT.
- *     responses:
- *       200:
- *         description: Token válido.
- *       401:
- *         description: Token no válido o expirado.
+ * @param {object} req - El objeto de solicitud de Express.
+ * @param {object} res - El objeto de respuesta de Express.
  */
-router.post('/validate', apiKeyRequired, tokenRequired, (req, res) => {
+router.post('/validate', clientAuthMiddleware, (req, res) => {
     res.json({ valid: true, user: req.user });
 });
 
 /**
  * @swagger
  * /auth/profile:
- *   get:
+ *   post:
  *     summary: 👤 Obtiene el perfil del usuario autenticado.
- *     responses:
- *       200:
- *         description: Perfil del usuario.
- *       401:
- *         description: No autorizado.
+ * @param {object} req - El objeto de solicitud de Express.
+ * @param {object} res - El objeto de respuesta de Express.
  */
-router.post('/profile', apiKeyRequired, tokenRequired, (req, res) => {
+router.post('/profile', clientAuthMiddleware, (req, res) => {
     res.json({
         resultado: 'ok',
         message: 'Perfil del usuario autenticado',
@@ -134,14 +123,13 @@ router.post('/profile', apiKeyRequired, tokenRequired, (req, res) => {
  * /auth/logout:
  *   post:
  *     summary: 🚪 Cierra la sesión del usuario.
- *     responses:
- *       200:
- *         description: Sesión cerrada correctamente.
- *       401:
- *         description: No autorizado.
+ * @param {object} req - El objeto de solicitud de Express.
+ * @param {object} res - El objeto de respuesta de Express.
  */
-router.post('/logout', apiKeyRequired, tokenRequired, (req, res) => {
-    revokedTokens.add(req.user.jti);
+router.post('/logout', clientAuthMiddleware, (req, res) => {
+    if (req.user?.jti) {
+        revokedTokens.add(req.user.jti);
+    }
     res.json({ resultado: 'ok', message: 'La sesión se ha cerrado correctamente' });
 });
 
