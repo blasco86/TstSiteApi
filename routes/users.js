@@ -1,6 +1,5 @@
 import express from 'express';
-import { tokenRequired } from '../middlewares/tokenRequired.js';
-import { apiKeyRequired } from '../middlewares/apiKeyRequired.js';
+import { clientAuthMiddleware } from '../middlewares/clientAuthMiddleware.js';
 import { query } from '../cfg/db.js';
 
 const router = express.Router();
@@ -9,28 +8,13 @@ const router = express.Router();
  * @swagger
  * /users/{accion}:
  *   post:
- *     summary: 🚀 Gestión de usuarios.
- *     parameters:
- *       - in: path
- *         name: accion
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Operación realizada con éxito.
- *       400:
- *         description: Error en la solicitud.
- *       500:
- *         description: Error en el servidor.
+ *     summary: 👥 Gestión de usuarios.
+ *     description: Requiere JWT válido. No requiere API Key.
+ * @param {object} req - El objeto de solicitud de Express.
+ * @param {object} res - El objeto de respuesta de Express.
+ * @param {function} next - La función next de Express.
  */
-router.post('/:accion', apiKeyRequired, tokenRequired, async (req, res, next) => {
+router.post('/:accion', clientAuthMiddleware, async (req, res, next) => {
     const { accion } = req.params;
     const datos = req.body;
 
