@@ -70,11 +70,6 @@ app.use(globalLimiter);
 // 4. Express JSON Parser: Parsea los cuerpos de las solicitudes entrantes con formato JSON.
 app.use(express.json({ limit: '1mb' }));
 
-// 5. Middlewares de encriptación: Desencripta el cuerpo de la solicitud y encripta la respuesta si es necesario.
-app.use(decryptBodyMiddleware);
-app.use(encryptResponseMiddleware);
-
-
 /**
  * 🗺️ Definición de las rutas de la API.
  */
@@ -82,8 +77,8 @@ app.get('/', (req, res) => {
     const status = {
         resultado: 'ok',
         mensaje: 'TstSite API Operativa',
-        version: '2.5.0',
-        entorno: process.env.NODE_ENV || 'production'
+        version: '2.5.1',
+        entorno: process.env.NODE_ENV || 'tst'
     };
 
     if (req.accepts('html')) {
@@ -103,11 +98,11 @@ app.get('/', (req, res) => {
             </head>
             <body>
                 <div class="container">
-                    <h1>🚀 TstSite Backend Gateway</h1>
+                    <h1>🤖 TstSite API 🤖</h1>
                     <p>Estado del sistema: <span class="tag">ONLINE</span></p>
                     <pre>${JSON.stringify(status, null, 4)}</pre>
                     <hr style="border:0; border-top: 1px dashed #444;">
-                    <p style="font-size: 0.8em; color: #888;">Servidor configurado para entornos Multiplataforma (Android, JS, WasmJS)</p>
+                    <p style="font-size: 0.8em; color: #888;">Servidor configurado para entornos Multiplataforma</p>
                 </div>
             </body>
             </html>
@@ -116,6 +111,9 @@ app.get('/', (req, res) => {
         res.json(status);
     }
 });
+// 5. Middlewares de encriptación: Desencripta el cuerpo de la solicitud y encripta la respuesta si es necesario.
+app.use(decryptBodyMiddleware);
+app.use(encryptResponseMiddleware);
 
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
