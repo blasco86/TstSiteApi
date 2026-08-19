@@ -14,7 +14,7 @@
     "dotenv": "^17.4.2",
     "ejs": "^6.0.1",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.1",
+    "express-rate-limit": "^8.6.2",
     "fernet": "^0.3.3",
     "helmet": "^8.3.0",
     "http-errors": "^2.0.1",
@@ -22,7 +22,7 @@
     "morgan": "^1.11.0",
     "node-fetch": "^3.3.2",
     "pbkdf2": "^3.1.6",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
